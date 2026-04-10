@@ -7,8 +7,11 @@ def generate_response(command, current_user=None):
     if "temperature" in command or "hot" in command:
         return "It seems warm. I will turn on the air conditioner for you."
 
-    elif "light" in command or "lights" in command:
+    elif "light on " in command or "lights on" in command:
         return "Sure, turning the lights on now."
+
+    elif "light off " in command or "lights off" in command:
+        return "Sure, turning the lights off now."
 
     elif "who am i" in command:
         if current_user:
@@ -32,6 +35,12 @@ def generate_response(command, current_user=None):
 
     elif "stop" in command or "exit" in command or "quit" in command:
         return "shutdown"
+
+    elif "cold" in command or "cool" in command:
+        return "It seems cool. I will turn off the air conditioner for you."
+
+    elif "date" in command:
+        return f"Today's date is {datetime.now().strftime('%B %d, %Y')}"
 
     else:
         return "I heard you, but I am not sure how to help with that yet."
