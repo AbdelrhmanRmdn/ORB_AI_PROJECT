@@ -1,0 +1,6 @@
+speechrecognition(done)
+pyttsx3(done)
+opencv-python
+face_recognition
+rpi-ws281x
+pyaudio
