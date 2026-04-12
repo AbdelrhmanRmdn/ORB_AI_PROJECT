@@ -29,7 +29,7 @@ def listen():
     #  TEST MODE (Simulation)
     if TEST_MODE or not VOICE_ENABLED:
         try:
-            command = input("🎤 Type command: ").strip()
+            command = input("Type command: ").strip()
             if not command:
                 print("[VOICE] Empty input")
                 return None
