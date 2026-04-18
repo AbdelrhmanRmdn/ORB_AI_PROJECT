@@ -5,7 +5,9 @@ def generate_response(command, current_user=None):
     command = command.lower().strip()
 
     #  TEMPERATURE
-    if any(word in command for word in ["cold", "cool"]):
+    if any(
+        word in command for word in ["cold", "cool"]
+    ):  # supabase.('tableName').select('*').eq('column', 'value')
         return "It seems cool. I will turn off the air conditioner."
 
     elif any(word in command for word in ["hot", "warm"]):
