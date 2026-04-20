@@ -1,13 +1,16 @@
-TEST_MODE = True
-LED_ENABLED = False
-
-FACE_RECOGNITION_ENABLED = False
+TEST_MODE = False
 VOICE_ENABLED = True
+FACE_RECOGNITION_ENABLED = True
 LED_ENABLED = False
 
-VOICE_LANGUAGE = "en-US"
+# Set this to the Raspberry Pi mic device index if you want to force a device.
+# Leave as None to auto-detect a likely USB microphone.
+MICROPHONE_DEVICE_INDEX = 1
+
 LISTEN_TIMEOUT = 5
-PHRASE_TIME_LIMIT = 7
+PHRASE_TIME_LIMIT = 5
+VOICE_LANGUAGE = "en-US"
+
 MAX_VOICE_RETRIES = 3
 
 AUTHORIZED_USERS = ["Karim", "Boudy", "Admin"]
