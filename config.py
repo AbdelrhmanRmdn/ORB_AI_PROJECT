@@ -107,6 +107,15 @@ class Settings:
     database_log_commands: bool = True
     database_log_events: bool = True
 
+    llm_provider: str = "none"
+    llm_max_tokens: int = 120
+    llm_temperature: float = 0.2
+    llm_timeout_seconds: float = 20.0
+    openai_model: str = "gpt-5-mini"
+    gemini_model: str = "gemini-2.5-flash"
+    ollama_host: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen2.5:1.5b"
+
     camera_enabled: bool = True
     camera_index: int = 0
     camera_width: int = 320
@@ -182,6 +191,14 @@ def load_settings() -> Settings:
         ),
         database_log_commands=_env_bool("ORB_DATABASE_LOG_COMMANDS", True),
         database_log_events=_env_bool("ORB_DATABASE_LOG_EVENTS", True),
+        llm_provider=os.getenv("ORB_LLM_PROVIDER", "none"),
+        llm_max_tokens=_env_int("ORB_LLM_MAX_TOKENS", 120),
+        llm_temperature=_env_float("ORB_LLM_TEMPERATURE", 0.2),
+        llm_timeout_seconds=_env_float("ORB_LLM_TIMEOUT_SECONDS", 20.0),
+        openai_model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
+        ollama_model=os.getenv("ORB_OLLAMA_MODEL", "qwen2.5:1.5b"),
         camera_enabled=_env_bool("ORB_CAMERA_ENABLED", True),
         camera_index=_env_int("ORB_CAMERA_INDEX", 0),
         camera_width=_env_int("ORB_CAMERA_WIDTH", 320),

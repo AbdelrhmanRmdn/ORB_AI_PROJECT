@@ -44,7 +44,7 @@ class ORBAssistant:
         self.recognizer = recognizer or FaceRecognizer(settings, database=self.database)
         self.stt = stt or SpeechToText(settings, mock_command=mock_command)
         self.tts = tts or TextToSpeech(settings)
-        self.responses = responses or ResponseGenerator()
+        self.responses = responses or ResponseGenerator(settings=settings)
         self._initialized = False
 
     def setup(self) -> None:

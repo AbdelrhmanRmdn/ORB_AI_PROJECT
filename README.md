@@ -8,6 +8,7 @@ ORB is an offline-first embedded AI assistant prepared for Raspberry Pi 5. The r
 4. The intent system generates a response.
 5. pyttsx3 speaks the response offline.
 6. If Supabase is configured, ORB syncs authorized users and logs commands/events.
+7. If an LLM provider is enabled, fallback questions are answered by Gemini or another configured provider.
 
 The project defaults to mock mode so `python main.py` can start on a development machine without a camera, microphone, Pi GPIO, or downloaded models.
 
@@ -19,6 +20,7 @@ orb_pipeline.py          Full camera -> face -> speech -> AI -> TTS workflow
 config.py                Environment-driven Raspberry Pi settings
 intent_handler.py        Lightweight deterministic intent classifier
 response_generator.py    Assistant responses
+ai/                      Optional Gemini/OpenAI/Ollama LLM fallback providers
 camera.py                Camera abstraction with mock mode
 yolo_detector.py         YOLOv8n person-only detector
 face_rec.py              Known-face loading and recognition
@@ -116,6 +118,11 @@ ORB_DATABASE_SYNC_USERS=1
 ORB_DATABASE_SYNC_FACE_METADATA=0
 ORB_DATABASE_LOG_COMMANDS=1
 ORB_DATABASE_LOG_EVENTS=1
+ORB_LLM_PROVIDER=none
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5-mini
 ```
 
 Use `ORB_TEST_MODE=1` for mock demos and `ORB_TEST_MODE=0` on Raspberry Pi hardware.
@@ -170,6 +177,42 @@ To configure Supabase:
 5. Put the project URL and API key in `.env`.
 
 For a university prototype on Raspberry Pi, using the Supabase anon key is acceptable only if Row Level Security policies are configured safely. For unrestricted inserts/selects from a trusted private Pi, use a server-side key carefully and never commit it.
+
+## Real AI Model
+
+ORB has optional LLM fallback support in `ai/`. Simple commands still run locally through `intent_handler.py`; only fallback or complex questions call the real AI provider.
+
+Disabled default:
+
+```text
+ORB_LLM_PROVIDER=none
+```
+
+Gemini cloud mode:
+
+```text
+ORB_LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Gemini is cloud-based, so it needs internet on the Raspberry Pi. It does not require a local model download and is lighter on Pi CPU/RAM than running a local LLM.
+
+OpenAI cloud mode is also still available:
+
+```text
+ORB_LLM_PROVIDER=openai
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5-mini
+```
+
+Advanced local Ollama mode is still supported in code if you later want offline LLMs:
+
+```text
+ORB_LLM_PROVIDER=ollama
+ORB_OLLAMA_MODEL=qwen2.5:1.5b
+OLLAMA_HOST=http://127.0.0.1:11434
+```
 
 ## Model Downloads
 

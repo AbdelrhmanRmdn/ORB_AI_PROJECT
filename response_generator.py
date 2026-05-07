@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from ai.llm_provider import LLMProvider, build_llm_provider
+from config import Settings, SETTINGS
 from intent_handler import Intent, IntentHandler
 from system_status import format_system_status
 
@@ -15,8 +17,15 @@ class GeneratedResponse:
 
 
 class ResponseGenerator:
-    def __init__(self, intent_handler: IntentHandler | None = None) -> None:
+    def __init__(
+        self,
+        intent_handler: IntentHandler | None = None,
+        llm_provider: LLMProvider | None = None,
+        settings: Settings = SETTINGS,
+    ) -> None:
+        self.settings = settings
         self.intent_handler = intent_handler or IntentHandler()
+        self.llm_provider = llm_provider or build_llm_provider(settings)
 
     def generate(self, command: str | None, current_user: str | None = None) -> GeneratedResponse:
         intent = self.intent_handler.classify(command)
@@ -74,10 +83,11 @@ class ResponseGenerator:
                 intent,
             )
 
-        return GeneratedResponse(
-            "I heard you, but I am not sure how to help with that yet.",
-            intent,
-        )
+        llm_result = self.llm_provider.generate(command or "", current_user=current_user)
+        if llm_result.ok:
+            return GeneratedResponse(llm_result.text, intent)
+
+        return GeneratedResponse(llm_result.text, intent)
 
 
 def generate_response(command: str | None, current_user: str | None = None) -> str:

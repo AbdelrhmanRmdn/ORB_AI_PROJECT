@@ -34,6 +34,7 @@ class FinalSystemChecker:
         self._check_dependencies()
         self._check_config()
         self._check_ai_flow()
+        self._check_llm_provider()
         self._check_camera()
         self._check_audio()
         self._check_face_database()
@@ -85,6 +86,11 @@ class FinalSystemChecker:
             "database.models",
             "database.queries",
             "database.supabase_client",
+            "ai.llm_provider",
+            "ai.gemini_llm",
+            "ai.openai_llm",
+            "ai.ollama_llm",
+            "ai.prompts",
             "face_rec",
             "final_system_check",
             "intent_handler",
@@ -120,6 +126,8 @@ class FinalSystemChecker:
             "pyttsx3": self.real,
             "sounddevice": self.real,
             "supabase": False,
+            "openai": False,
+            "google.genai": False,
             "ultralytics": self.real,
         }
         missing_required: list[str] = []
@@ -169,6 +177,30 @@ class FinalSystemChecker:
             self._ok("AI flow", "Intent classification and response generation work")
         else:
             self._fail("AI flow", f"Unexpected response: {response}")
+
+    def _check_llm_provider(self) -> None:
+        from ai.llm_provider import build_llm_provider
+        from config import load_settings
+
+        settings = load_settings()
+        provider = build_llm_provider(settings)
+        configured = settings.llm_provider.strip().lower()
+
+        if configured in {"", "none", "disabled", "off"}:
+            self._ok("LLM provider", "Disabled by default; local intent AI remains active")
+            return
+
+        if configured in {"gemini", "openai", "ollama"}:
+            result = provider.generate("Say ready in one word.")
+            if result.ok:
+                self._ok("LLM provider", f"{configured} provider responded")
+            elif self.strict:
+                self._fail("LLM provider", result.error or result.text)
+            else:
+                self._warn("LLM provider", result.error or result.text)
+            return
+
+        self._warn("LLM provider", f"Unknown provider configured: {settings.llm_provider}")
 
     def _check_camera(self) -> None:
         from camera import CameraSource
