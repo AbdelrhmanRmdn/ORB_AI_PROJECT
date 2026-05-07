@@ -1,6 +1,20 @@
-speechrecognition(done)
-pyttsx3(done)
-opencv-python
-face_recognition
-rpi-ws281x
-pyaudio
+# Core runtime
+faster-whisper>=1.1.1
+ultralytics>=8.3.0
+face-recognition>=1.3.0
+pyttsx3>=2.98
+opencv-python>=4.10.0.84
+numpy>=1.26,<3
+sounddevice>=0.5.1
+
+# Optional hardware and helpers
+rpi-ws281x>=5.0.0; platform_machine == "aarch64"
+python-dotenv>=1.0.1
+psutil>=5.9.8
+
+# Supabase backend and optional web status page
+supabase>=2.4.0
+flask>=3.0.0
+
+# Tests
+pytest>=8.0.0

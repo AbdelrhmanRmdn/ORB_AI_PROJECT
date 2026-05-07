@@ -1,82 +1,53 @@
-import time
+from __future__ import annotations
 
-import face_rec
-import voice_assistant
-import led_control
-import assistant_brain
-
-from config import MAX_VOICE_RETRIES
+import argparse
+import os
 
 
-def startup_orb():
-    print(" ORB AI System Starting...")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the ORB AI Assistant")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--mock", action="store_true", help="Force mock mode")
+    mode.add_argument("--real", action="store_true", help="Force real hardware/model mode")
+    parser.add_argument("--once", action="store_true", help="Run one pipeline cycle and exit")
+    parser.add_argument(
+        "--mock-command",
+        help="Command text to inject in mock mode, useful for tests and demos",
+    )
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Do not prompt for typed commands in mock mode",
+    )
+    return parser.parse_args()
 
-    led_control.init_led()
-    led_control.show_startup_light()
-    time.sleep(1)
 
-    print("[SYSTEM] Identifying user...")
-    user_name = face_rec.identify_user()
+def apply_cli_env(args: argparse.Namespace) -> None:
+    if args.mock:
+        os.environ["ORB_TEST_MODE"] = "1"
+    if args.real:
+        os.environ["ORB_TEST_MODE"] = "0"
+    if args.once:
+        os.environ["ORB_ONCE"] = "1"
+    if args.mock_command:
+        os.environ["ORB_MOCK_COMMAND"] = args.mock_command
+    if args.non_interactive:
+        os.environ["ORB_NONINTERACTIVE"] = "1"
 
-    if user_name:
-        print(f"[SYSTEM] User recognized: {user_name}")
-        led_control.show_success_light()
-        voice_assistant.speak(f"Hello {user_name}, I am online and ready.")
-    else:
-        print("[SYSTEM] Unknown user")
-        led_control.show_error_light()
-        voice_assistant.speak("Face not recognized. Entering guest mode.")
-        user_name = None
 
-    fail_count = 0
+def main() -> None:
+    args = parse_args()
+    apply_cli_env(args)
 
-    while True:
-        print("\n[SYSTEM] Waiting for command...")
-        led_control.show_listening_light()
+    from config import load_settings
+    from logging_config import configure_logging
+    from orb_pipeline import ORBAssistant
 
-        command = voice_assistant.listen()
-
-        #  No input
-        if not command:
-            fail_count += 1
-            print(f"[SYSTEM WARNING] Failed listen attempt: {fail_count}")
-
-            if fail_count >= MAX_VOICE_RETRIES:
-                print("[SYSTEM ERROR] Too many failed attempts")
-                led_control.show_error_light()
-                voice_assistant.speak(
-                    "I am having trouble hearing you. Shutting down now."
-                )
-                break
-
-            continue
-
-        #  Valid input
-        fail_count = 0
-        print(f"[SYSTEM DEBUG] Command received: {command}")
-
-        led_control.show_processing_light()
-
-        response = assistant_brain.generate_response(command, current_user=user_name)
-
-        print(f"[SYSTEM DEBUG] Response: {response}")
-
-        #  Shutdown
-        if response == "shutdown":
-            print("[SYSTEM] Shutting down...")
-            led_control.show_speaking_light()
-            voice_assistant.speak("Goodbye!")
-            led_control.turn_off()
-            break
-
-        #  Normal response
-        led_control.show_speaking_light()
-        time.sleep(0.5)  # simulate thinking
-        voice_assistant.speak(response)
-
-        led_control.show_idle_light()
-        time.sleep(0.5)
+    settings = load_settings()
+    configure_logging(settings)
+    assistant = ORBAssistant(settings=settings, mock_command=args.mock_command)
+    assistant.run(max_cycles=1 if settings.loop_once else None)
 
 
 if __name__ == "__main__":
-    startup_orb()
+    main()

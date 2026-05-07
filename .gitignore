@@ -1,0 +1,12 @@
+.env
+.venv/
+.venv-1/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+logs/*.log
+data/recordings/*.wav
+data/models/*.pt
+data/models/faster-whisper/
+yolov8n.pt
+wheelhouse/
