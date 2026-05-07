@@ -49,6 +49,7 @@ class SpeechToText:
                 samplerate=sample_rate,
                 channels=channels,
                 dtype="float32",
+                device=self.settings.microphone_device_index,
             )
             sd.wait()
         except Exception as exc:
