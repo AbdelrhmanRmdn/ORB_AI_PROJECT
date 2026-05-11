@@ -1,81 +1,157 @@
 # ORB AI Assistant
 
-ORB is an offline-first embedded AI assistant prepared for Raspberry Pi 5. The runtime pipeline is:
+ORB is a Raspberry Pi-ready AI assistant. It detects a person, recognizes an authorized face, listens to a voice command, generates a response, speaks it back, and syncs important activity to Supabase.
 
-1. YOLOv8n checks the camera feed for a person.
-2. A frame is passed to face recognition.
-3. If the face is authorized, faster-whisper records and transcribes speech.
-4. The intent system generates a response.
-5. pyttsx3 speaks the response offline.
-6. If Supabase is configured, ORB syncs authorized users and logs commands/events.
-7. If an LLM provider is enabled, fallback questions are answered by Gemini or another configured provider.
+The project can run in mock/simulation mode on a laptop, then move to Raspberry Pi for camera, microphone, speaker, LED, YOLO, Whisper, and face recognition.
 
-The project defaults to mock mode so `python main.py` can start on a development machine without a camera, microphone, Pi GPIO, or downloaded models.
+## What It Does
 
-## Project Structure
+1. Detects a person with YOLO.
+2. Recognizes the user with face recognition.
+3. Checks if the user is authorized.
+4. Converts speech to text with faster-whisper.
+5. Classifies the command and generates a response.
+6. Speaks the response with pyttsx3.
+7. Sends command history, events, users, and device state to Supabase.
+8. Can use Gemini/OpenAI/Ollama for fallback AI answers.
+
+## Main Files
 
 ```text
-main.py                  CLI entry point
-orb_pipeline.py          Full camera -> face -> speech -> AI -> TTS workflow
-config.py                Environment-driven Raspberry Pi settings
-intent_handler.py        Lightweight deterministic intent classifier
-response_generator.py    Assistant responses
-ai/                      Optional Gemini/OpenAI/Ollama LLM fallback providers
-camera.py                Camera abstraction with mock mode
-yolo_detector.py         YOLOv8n person-only detector
-face_rec.py              Known-face loading and recognition
-speech_to_text.py        faster-whisper microphone STT
-text_to_speech.py        pyttsx3 offline TTS
-led_control.py           Raspberry Pi LED ring control with mock fallback
-database/                Supabase client, models, queries, schema, and manager
-tests/                   Mock-safe tests plus optional hardware smoke tests
-data/faces/              Put authorized face images here
-data/models/             Local model cache
-data/recordings/         Temporary microphone recordings
-scripts/                 Pi setup and mock check helpers
+main.py                  Main app runner
+orb_pipeline.py          Full assistant flow
+full_system_simulation.py Full terminal simulation using the real pipeline
+simulation_mode.py       Terminal-only simulation
+final_system_check.py    Final readiness checker
+config.py                Environment settings
+intent_handler.py        Command intent detection
+response_generator.py    Response generation
+face_rec.py              Face recognition
+speech_to_text.py        Speech-to-text
+text_to_speech.py        Text-to-speech
+yolo_detector.py         Person detection
+led_control.py           Raspberry Pi LED control
+database/                Supabase integration
+ai/                      Optional cloud/local LLM providers
+tests/                   Automated tests
+data/faces/              Authorized face images
 ```
 
-## Quick Development Run
+The file that sends data to Supabase is:
+
+```text
+database/database_manager.py
+```
+
+## Quick Setup
+
+Create and activate a virtual environment, then install dependencies:
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python main.py --once --mock-command "system status" --non-interactive
-python -m pytest
 ```
 
-Interactive mock mode:
+On Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Create `.env` from `.env.example` and fill in private values:
 
 ```bash
-python main.py --mock
+cp .env.example .env
 ```
 
-Real hardware mode:
+Important `.env` values:
+
+```text
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+GEMINI_API_KEY=your_gemini_key
+GEMINI_MODEL=gemini-2.5-flash
+ORB_DEVICE_NAME=orb_pi
+ORB_TEST_MODE=1
+ORB_DATABASE_ENABLED=1
+ORB_LLM_PROVIDER=none
+```
+
+Use `ORB_TEST_MODE=1` for laptop demos and `ORB_TEST_MODE=0` on Raspberry Pi real hardware. `simulation_mode.py` forces Gemini for simulation responses even if `ORB_LLM_PROVIDER` is set to `none`.
+
+## Run The Whole System In Terminal
+
+This is the best command for your laptop presentation. It runs the full assistant pipeline in simulation mode:
 
 ```bash
-python main.py --real
+python full_system_simulation.py
 ```
 
-Terminal-only full pipeline simulation:
+What it simulates:
+
+```text
+YOLO person detection
+face recognition
+typed terminal voice command
+Gemini AI response
+TTS speaking simulation
+Supabase command/event/device logging
+```
+
+Type commands in the terminal when it says `Type command:`. Type `exit` to stop.
+
+To run the same full system without Supabase writes:
 
 ```bash
-python simulation_mode.py --user Boudy
+python full_system_simulation.py --no-database
 ```
 
-Non-interactive simulation:
+To quick-check one command:
 
 ```bash
-python simulation_mode.py --user Boudy --command "hello" --command "what time is it" --command "exit"
+python full_system_simulation.py --mock-command "explain embedded AI in one short sentence"
 ```
 
-Final system check:
+## Run A Smaller Terminal Simulation
+
+Simulation uses Gemini by default. Best command for a Gemini terminal demo:
 
 ```bash
-python final_system_check.py
+python simulation_mode.py --user Karim --command "explain embedded AI in one short sentence" --command "hello" --command "exit"
 ```
 
-## Raspberry Pi 5 Setup
+To also log the Gemini simulation to Supabase:
 
-On the Raspberry Pi:
+```bash
+python simulation_mode.py --user Karim --log-database --command "explain embedded AI in one short sentence" --command "exit"
+```
+
+Alternative mock pipeline run:
+
+```bash
+python main.py --mock --once --mock-command "system status" --non-interactive
+```
+
+Run the Flask dashboard:
+
+```bash
+python -m flask --app app run --host 127.0.0.1 --port 5000
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5000
+http://127.0.0.1:5000/command-logs
+```
+
+## Run On Raspberry Pi
+
+Do not transfer the Windows `.venv` to the Pi. Copy the project folder, then create a fresh Pi virtual environment:
 
 ```bash
 sudo apt update
@@ -84,54 +160,64 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements.txt
+python main.py --real
 ```
 
-Or run:
+You can also run:
 
 ```bash
 bash scripts/bootstrap_pi.sh
 ```
 
-`face-recognition` depends on `dlib`, which can take a long time to build on Raspberry Pi. Keep the Pi powered and cooled during installation.
+## Supabase Tables
 
-## Configuration
-
-Copy `.env.example` to `.env` and edit values:
-
-```bash
-cp .env.example .env
-```
-
-Important options:
+The code matches the team Supabase schema:
 
 ```text
-ORB_TEST_MODE=0
-ORB_AUTHORIZED_USERS=Karim,Admin
-ORB_WHISPER_MODEL_SIZE=tiny
-ORB_YOLO_MODEL=yolov8n.pt
-ORB_CAMERA_INDEX=0
-ORB_LED_ENABLED=1
-SUPABASE_URL=
-SUPABASE_KEY=
-ORB_DATABASE_ENABLED=1
-ORB_DATABASE_SYNC_USERS=1
-ORB_DATABASE_SYNC_FACE_METADATA=0
-ORB_DATABASE_LOG_COMMANDS=1
-ORB_DATABASE_LOG_EVENTS=1
-ORB_LLM_PROVIDER=none
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5-mini
+users
+command_logs
+device_state
+commands
+command_keywords
+system_settings
+responses_manual_actions
 ```
 
-Use `ORB_TEST_MODE=1` for mock demos and `ORB_TEST_MODE=0` on Raspberry Pi hardware.
+Connected data:
+
+```text
+users                  Authorized users and face image paths
+command_logs           Commands, detected intent, responses, events
+device_state           Latest device/user/command/response state
+commands               Intent definitions from Supabase
+command_keywords       Keywords linked to commands
+system_settings        Team settings table
+responses_manual_actions Manual response/action table
+```
+
+Important note: the command intent column is named `detected-intent` in Supabase, with a hyphen. The code already handles this.
+
+## Save Face Data To Supabase
+
+When code captures or chooses a user image, call:
+
+```python
+from database import save_user_face_data
+
+save_user_face_data(
+    display_name="Karim",
+    full_name="Karim Hassan",
+    face_image_path="data/faces/Karim/karim_2.jpg",
+    authorized=True,
+    face_label="karim",
+)
+```
+
+This writes to `users.face_embedding_path`. The actual image file stays in the project folder unless Supabase Storage upload is added later.
 
 ## Face Images
 
-Place authorized user images in `data/faces/`.
-
-Recommended layout:
+Put authorized face images here:
 
 ```text
 data/faces/Karim/karim_1.jpg
@@ -139,139 +225,34 @@ data/faces/Karim/karim_2.jpg
 data/faces/Admin/admin_1.jpg
 ```
 
-Folder names become the recognized names. If images are placed directly in `data/faces/`, the file name is used. Each image should contain one clear frontal face.
+Each image should contain one clear frontal face.
 
-## Supabase Integration
+## Tests And Final Checks
 
-Supabase files live in `database/`.
-
-- `database/supabase_client.py` creates the Supabase client from `SUPABASE_URL` and `SUPABASE_KEY`.
-- `database/models.py` contains typed row models.
-- `database/queries.py` contains table constants and schema SQL.
-- `database/database_manager.py` is the only database layer the assistant pipeline calls.
-- `database/schema.sql` is the SQL your software team should run in the Supabase SQL editor.
-
-The assistant communicates with Supabase through `DatabaseManager`:
-
-- During startup, it checks database health and logs a `startup` event.
-- Face recognition can fetch authorized users from the `users` table.
-- Optional local face metadata sync can upsert records into `users`.
-- Every recognized command can be inserted into `interaction_logs`.
-- Startup, shutdown, unauthorized face, and voice timeout events can be inserted into `system_events`.
-
-Suggested table relationships:
-
-```text
-users.id -> interaction_logs.user_id
-users stores authorization and face image metadata.
-interaction_logs stores recognized commands and AI responses.
-system_events stores operational events independent of a user.
-```
-
-To configure Supabase:
-
-1. Create a Supabase project.
-2. Open the SQL editor.
-3. Run the contents of `database/schema.sql`.
-4. Add authorized users to the `users` table.
-5. Put the project URL and API key in `.env`.
-
-For a university prototype on Raspberry Pi, using the Supabase anon key is acceptable only if Row Level Security policies are configured safely. For unrestricted inserts/selects from a trusted private Pi, use a server-side key carefully and never commit it.
-
-## Real AI Model
-
-ORB has optional LLM fallback support in `ai/`. Simple commands still run locally through `intent_handler.py`; only fallback or complex questions call the real AI provider.
-
-Disabled default:
-
-```text
-ORB_LLM_PROVIDER=none
-```
-
-Gemini cloud mode:
-
-```text
-ORB_LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-Gemini is cloud-based, so it needs internet on the Raspberry Pi. It does not require a local model download and is lighter on Pi CPU/RAM than running a local LLM.
-
-OpenAI cloud mode is also still available:
-
-```text
-ORB_LLM_PROVIDER=openai
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5-mini
-```
-
-Advanced local Ollama mode is still supported in code if you later want offline LLMs:
-
-```text
-ORB_LLM_PROVIDER=ollama
-ORB_OLLAMA_MODEL=qwen2.5:1.5b
-OLLAMA_HOST=http://127.0.0.1:11434
-```
-
-## Model Downloads
-
-Models are lazy-loaded.
-
-- faster-whisper downloads the configured model, default `tiny`, into `data/models/faster-whisper/`.
-- Ultralytics downloads `yolov8n.pt` on first real YOLO run. If a downloaded file appears in the project root, the detector copies it into `data/models/yolov8n.pt`.
-
-For Raspberry Pi performance, the defaults use CPU, `int8` Whisper compute, low camera resolution, YOLO image size 320, and frame skipping.
-
-## Optional Wheel Cache
-
-A wheel cache is architecture-specific. Build it on the Raspberry Pi, not Windows:
-
-```bash
-bash scripts/cache_wheels_pi.sh
-python -m pip install --no-index --find-links wheelhouse -r requirements.txt
-```
-
-You can transfer `wheelhouse/` with the project for repeated installs on the same Pi OS/Python/architecture.
-
-## Hardware Notes
-
-- Microphone: install and test a USB microphone or Pi-compatible input device. `sounddevice` requires PortAudio.
-- TTS: `pyttsx3` uses `espeak-ng` on Linux.
-- Camera: enable and verify the camera before running real mode.
-- LED ring: `rpi-ws281x` usually needs appropriate GPIO permissions or sudo depending on wiring and OS setup.
-
-## Tests
-
-Mock-safe tests:
+Run all mock-safe tests:
 
 ```bash
 python -m pytest
 ```
 
-Optional Pi hardware smoke tests:
+Run final project check:
 
 ```bash
-ORB_RUN_HARDWARE_TESTS=1 ORB_TEST_MODE=0 python -m pytest -m hardware
+python final_system_check.py
 ```
 
-Optional live Supabase test:
+Run live Supabase test:
 
 ```bash
 ORB_RUN_SUPABASE_TESTS=1 python -m pytest tests/test_supabase.py -m supabase
 ```
 
-Final Raspberry Pi release check after hardware and dependencies are installed:
+On Raspberry Pi, after hardware is connected:
 
 ```bash
 python final_system_check.py --real --load-models --strict
 ```
 
-## Transfer To Raspberry Pi
+## Presentation Summary
 
-1. Copy the project folder to the Pi.
-2. Create `.env` from `.env.example`.
-3. Put face images into `data/faces/`.
-4. Run `bash scripts/bootstrap_pi.sh`.
-5. Activate the environment with `source .venv/bin/activate`.
-6. Run `python main.py --real`.
+ORB AI is an embedded assistant prepared for Raspberry Pi. It supports camera/person detection, face authorization, speech-to-text, intent handling, spoken responses, optional LLM fallback, and Supabase logging. Supabase stores users, command history, system events, and device state using the team’s database schema. The project is ready for laptop simulation and Raspberry Pi deployment after installing Pi dependencies and configuring `.env`.

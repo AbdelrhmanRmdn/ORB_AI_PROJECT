@@ -111,7 +111,16 @@ class ORBAssistant:
 
         led_control.show_speaking_light()
         self.tts.speak(response.text)
-        self.database.log_interaction(identity.name, command, response.text)
+        source = "mock" if self.settings.test_mode else "voice"
+        status = "shutdown_requested" if response.should_shutdown else "success"
+        self.database.log_interaction(
+            identity.name,
+            command,
+            response.text,
+            detected_intent=response.intent.name,
+            source=source,
+            status=status,
+        )
 
         return CycleResult(
             True,

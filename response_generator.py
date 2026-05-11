@@ -22,19 +22,27 @@ class ResponseGenerator:
         intent_handler: IntentHandler | None = None,
         llm_provider: LLMProvider | None = None,
         settings: Settings = SETTINGS,
+        prefer_llm_for_all: bool = False,
     ) -> None:
         self.settings = settings
         self.intent_handler = intent_handler or IntentHandler()
         self.llm_provider = llm_provider or build_llm_provider(settings)
+        self.prefer_llm_for_all = prefer_llm_for_all
 
     def generate(self, command: str | None, current_user: str | None = None) -> GeneratedResponse:
         intent = self.intent_handler.classify(command)
+        llm_result = None
 
         if intent.name == "no_input":
             return GeneratedResponse("I did not hear a command.", intent)
 
         if intent.name == "shutdown":
             return GeneratedResponse("Goodbye.", intent, should_shutdown=True)
+
+        if self.prefer_llm_for_all:
+            llm_result = self.llm_provider.generate(command or "", current_user=current_user)
+            if llm_result.ok:
+                return GeneratedResponse(llm_result.text, intent)
 
         if intent.name == "greeting":
             if current_user:
@@ -83,7 +91,8 @@ class ResponseGenerator:
                 intent,
             )
 
-        llm_result = self.llm_provider.generate(command or "", current_user=current_user)
+        if llm_result is None:
+            llm_result = self.llm_provider.generate(command or "", current_user=current_user)
         if llm_result.ok:
             return GeneratedResponse(llm_result.text, intent)
 

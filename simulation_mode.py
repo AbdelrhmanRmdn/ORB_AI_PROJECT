@@ -27,23 +27,28 @@ def run_simulation(
     user: str = "Boudy",
     commands: Iterable[str] | None = None,
     log_database: bool = False,
+    use_gemini: bool = True,
 ) -> int:
     from config import load_settings
     from database.database_manager import DatabaseManager
     from logging_config import configure_logging
     from response_generator import ResponseGenerator
 
+    base_settings = load_settings()
     settings = replace(
-        load_settings(),
+        base_settings,
         test_mode=True,
         database_log_commands=log_database,
         database_log_events=log_database,
+        llm_provider="gemini" if use_gemini else base_settings.llm_provider,
     )
     configure_logging(settings)
     database = DatabaseManager(settings)
-    responses = ResponseGenerator()
+    responses = ResponseGenerator(settings=settings, prefer_llm_for_all=use_gemini)
 
     print("=== ORB AI Assistant Terminal Simulation ===")
+    if use_gemini:
+        print(f"[AI MODEL] Gemini active: {settings.gemini_model}")
     print("[YOLO] Person detected")
     print(f"[FACE] Authorized user: {user}")
     print("[VOICE] Terminal speech input active")
@@ -74,7 +79,14 @@ def run_simulation(
         print(f"[TTS SIM]: {response.text}\n")
 
         if log_database:
-            logged = database.log_interaction(user, command, response.text)
+            logged = database.log_interaction(
+                user,
+                command,
+                response.text,
+                detected_intent=response.intent.name,
+                source="simulation",
+                status="shutdown_requested" if response.should_shutdown else "success",
+            )
             print(f"[DB]: interaction logged={logged}")
 
         if response.should_shutdown:

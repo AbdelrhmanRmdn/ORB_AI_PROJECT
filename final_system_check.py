@@ -60,6 +60,7 @@ class FinalSystemChecker:
         required = [
             "main.py",
             "simulation_mode.py",
+            "full_system_simulation.py",
             "final_system_check.py",
             "requirements.txt",
             ".env.example",
@@ -93,6 +94,7 @@ class FinalSystemChecker:
             "ai.prompts",
             "face_rec",
             "final_system_check",
+            "full_system_simulation",
             "intent_handler",
             "led_control",
             "logging_config",

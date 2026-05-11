@@ -7,6 +7,7 @@ def test_terminal_simulation_scripted_flow(capsys):
         user="Boudy",
         commands=["hello", "what time is it", "exit"],
         log_database=False,
+        use_gemini=False,
     )
 
     captured = capsys.readouterr()

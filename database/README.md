@@ -5,9 +5,9 @@ This folder contains the complete Supabase integration layer for ORB.
 ## Files
 
 - `supabase_client.py`: loads `SUPABASE_URL` and `SUPABASE_KEY` from environment variables or `.env`, then creates the Supabase Python client lazily.
-- `models.py`: typed dataclasses for rows ORB reads or writes: `UserRecord`, `InteractionLog`, and `SystemEvent`.
+- `models.py`: typed dataclasses for rows ORB reads or writes: `UserRecord`, `InteractionLog`, `SystemEvent`, and `DeviceState`.
 - `queries.py`: table names, selected column lists, and an embedded copy of the suggested SQL schema.
-- `database_manager.py`: reusable repository layer used by the assistant. It fetches authorized users, syncs local face metadata, logs commands, and logs system events.
+- `database_manager.py`: reusable repository layer used by the assistant. It fetches authorized users, syncs local face metadata, logs commands/events, and updates device state.
 - `schema.sql`: SQL to run in the Supabase SQL editor before using the project.
 
 The rest of the project should talk to `DatabaseManager`, not directly to the Supabase client.
@@ -18,14 +18,48 @@ Useful manager methods:
 - `get_authorized_users()`
 - `get_user_by_name(name)`
 - `upsert_user(name, authorized, face_image_path)`
+- `save_user_face_data(display_name, face_image_path, full_name, authorized, face_label)`
 - `set_user_authorized(name, authorized)`
 - `sync_local_face_metadata()`
-- `log_interaction(user_name, command, ai_response)`
+- `log_interaction(user_name, command, ai_response, detected_intent, source, status)`
 - `log_event(event_type, message)`
+- `update_device_state(...)`
 
 ## Tables
 
-`users` stores who can use the assistant. `interaction_logs.user_id` references `users.id`, so command history can be connected to a known authorized person. `system_events` stores operational events such as startup, shutdown, and unauthorized access.
+The code maps to the Supabase tables from the team schema:
+
+- `users`: `full_name`, `display_name`, `is_authorized`, `face_label`, and `face_embedding_path`.
+- `command_logs`: `user_id`, `raw_command`, `detected-intent`, `response_text`, `source`, and `status`.
+- `device_state`: one row per device name, including the latest user, command, response, online flag, and state.
+- `commands` and `command_keywords`: the configured intent vocabulary.
+- `responses_manual_actions`: manual response/action rows.
+- `system_settings`: configurable key/value settings.
+
+System events are stored in `command_logs` with `source='system'` because the current team schema does not include a separate `system_events` table.
+
+## Saving Face Data From Code
+
+When another part of the project captures or chooses a user's face image, call the helper function instead of writing Supabase code there:
+
+```python
+from database import save_user_face_data
+
+image_path = "data/faces/Karim/karim_2.jpg"
+
+user = save_user_face_data(
+    display_name="Karim",
+    full_name="Karim Hassan",
+    face_image_path=image_path,
+    authorized=True,
+    face_label="karim",
+)
+
+if user is None:
+    print("Face data was not saved")
+```
+
+This writes to `public.users` and stores the image path in `face_embedding_path`.
 
 If Supabase is not configured, the manager returns safe offline values and the assistant continues running locally.
 
@@ -40,8 +74,20 @@ If Supabase is not configured, the manager returns safe offline values and the a
 Example user row:
 
 ```sql
-insert into public.users (name, authorized, face_image_path)
-values ('Karim', true, 'data/faces/Karim/karim_1.jpg');
+insert into public.users (
+    full_name,
+    display_name,
+    is_authorized,
+    face_label,
+    face_embedding_path
+)
+values (
+    'Karim Hassan',
+    'Karim',
+    true,
+    'karim',
+    'data/faces/Karim/karim_1.jpg'
+);
 ```
 
 ## Security

@@ -106,12 +106,14 @@ class Settings:
     database_sync_face_metadata: bool = False
     database_log_commands: bool = True
     database_log_events: bool = True
+    device_name: str = "orb_pi"
 
     llm_provider: str = "none"
     llm_max_tokens: int = 120
     llm_temperature: float = 0.2
     llm_timeout_seconds: float = 20.0
     openai_model: str = "gpt-5-mini"
+    gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash"
     ollama_host: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:1.5b"
@@ -191,11 +193,13 @@ def load_settings() -> Settings:
         ),
         database_log_commands=_env_bool("ORB_DATABASE_LOG_COMMANDS", True),
         database_log_events=_env_bool("ORB_DATABASE_LOG_EVENTS", True),
+        device_name=os.getenv("ORB_DEVICE_NAME", "orb_pi"),
         llm_provider=os.getenv("ORB_LLM_PROVIDER", "none"),
         llm_max_tokens=_env_int("ORB_LLM_MAX_TOKENS", 120),
         llm_temperature=_env_float("ORB_LLM_TEMPERATURE", 0.2),
         llm_timeout_seconds=_env_float("ORB_LLM_TIMEOUT_SECONDS", 20.0),
         openai_model=os.getenv("OPENAI_MODEL", "gpt-5-mini"),
+        gemini_api_key=os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", "")),
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
         ollama_model=os.getenv("ORB_OLLAMA_MODEL", "qwen2.5:1.5b"),
